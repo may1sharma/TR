@@ -7,6 +7,8 @@
 	<script src="require.js"></script>
 	<!-- Load srlib following RequireJS -->
 	<script src="srlib.js"></script>
+	<!-- Include sketchio for converting standard sketch to compact one -->
+	<script src="sketchio.js"></script>
 	<!-- JQuery provides a very nice set of tools when dealing with AJAX requests -->
 	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.0/jquery.min.js"></script>
 </head>
@@ -55,6 +57,12 @@
 		// strokeIds.add(id);
 		// output.trussStrokeIds = [...strokeIds]; // This is valid syntax and turns the set into an array.
 		
+		sketch = SketchIo.simplify(sketch);
+		if(!sketch) {
+			return output;
+		}
+		// Recognition begins here...
+
 		output.trussStrokeIds = strokeIds;
 		return output;
 	}
