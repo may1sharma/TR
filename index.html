@@ -11,6 +11,9 @@
 	<script src="sketchio.js"></script>
 	<!-- JQuery provides a very nice set of tools when dealing with AJAX requests -->
 	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.0/jquery.min.js"></script>
+	<script type="text/javascript" src="shortStraw.js"></script>
+	<script type="text/javascript" src="sketchRecTools.js"></script>
+
 </head>
 <body>
 	<div>Data location</div>
@@ -56,12 +59,51 @@
 		// var strokeIds = new Set();
 		// strokeIds.add(id);
 		// output.trussStrokeIds = [...strokeIds]; // This is valid syntax and turns the set into an array.
-		
+		console.log(sketch)
 		sketch = SketchIo.simplify(sketch);
+		console.log(sketch)
 		if(!sketch) {
 			return output;
 		}
 		// Recognition begins here...
+		// get the resampled sketch and its corner indices
+	    var resampledSketch = SketchRecTools.resampleByDistance(sketch);
+		console.log(resampledSketch)
+		// TODO Fix the below line errors
+	    var sketchCornerIndices = ShortStraw.run(resampledSketch);
+		console.log(sketchCornerIndices)
+
+	    // gather the corners from their indices
+	    var corners = [];
+	    for (var i = 0; i < resampledSketch.strokes.length; i++) {
+	      var resampledPoints = resampledSketch.strokes[i].points;
+	      var strokeCornerIndices = sketchCornerIndices[i];
+	      for (var j = 0; j < strokeCornerIndices.length; j++) {
+	        corners.push(resampledPoints[strokeCornerIndices[j]]);
+	      }
+
+	    // For each stroke check whether it is connected via line and include it in trussStrokeIds
+
+
+	    // count number of lines (should be < 4  overall)
+
+
+
+	    }
+
+	    console.log(corners);
+
+	    // For Loop and calculate
+	    // 1. Adjacency Matrix 
+	    // 2. Proximity Matrix
+
+
+	    // Apply 4 Golden Rules
+	    // 1. Shapes cannot have more than 4 sides
+	    // 2. Every Node must be connected to a triangle
+	    // 3. Beams cannot pass through a node
+	    // 4. No nodes in the middle of beam
+	    // 5. Our Check: Either trianglular shapes or degree check
 
 		output.trussStrokeIds = strokeIds;
 		return output;
