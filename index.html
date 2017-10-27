@@ -109,13 +109,23 @@
 			var resampledPoints = resampledSketch.strokes[i].points;
 			var strokeCornerIndices = sketchCornerIndices[i];
 			var isAllLines = true;
+			var arrowEndProximity = 0;
 
 			for (var j = 0; j < strokeCornerIndices.length; j++) {
 				corners.push(resampledPoints[strokeCornerIndices[j]]);
 				if (!(j==0 || isLine(resampledPoints, strokeCornerIndices[j-1], strokeCornerIndices[j]))) {
 					isAllLines = False;
 				}
+
+				// Arrow Elimination
+				// Arrows drawn in multiple strokes will get eliminated in substroke count check done later
+				// Here we are eliminating arrows drawn in single stroke.
+				// The idea is that the endpoint of an arrow would be in proximity of at least 2 other corners of that stroke.
+				if ( (j != strokeCornerIndices.length - 1) && inProximity(resampledPoints[strokeCornerIndices[j]], resampledPoints[strokeCornerIndices[strokeCornerIndices.length - 1]])) {
+					arrowEndProximity += 1;
+				}
 			}
+
 
 	    	// PolyLine Test as per PaleoSketch paper and include it in trussStrokeIds if the required condition satisfies
 	    	var DCRvalue = calculateDCR(resampledPoints);
@@ -123,7 +133,7 @@
 	    	var subStrokeCount = strokeCornerIndices.length - 1;
 	    	// Additional check for truss: excluding strokes with less than 4 corners 
 	    	// Minimum consideration should be a triangle with 4 corners or 3 sides
-	    	if (!(subStrokeCount < 3) && 
+	    	if (!(subStrokeCount < 3) && arrowEndProximity < 2 &&
 	    			(DCRvalue > 9.0 && subStrokeCount < 10) || (isAllLines && DCRvalue > 6.0))  {
 	    		strokeIds.add(resampledSketch.strokes[i].id);
 	    	}
