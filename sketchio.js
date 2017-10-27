@@ -141,7 +141,7 @@ var SketchIo = {
 
         // error-check #12: check if point has y property
         if (!newPoint.hasOwnProperty("y")) {
-          if (this.debugFlag) console.log("ERROR #12: point" + i + " does not have x property");
+          if (this.debugFlag) console.log("ERROR #12: point" + i + " does not have y property");
           continue;
         }
 

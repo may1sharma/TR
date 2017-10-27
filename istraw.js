@@ -9,6 +9,8 @@ var IStraw = {
    * @return {number[][]} The array of array of corner indices.
    */
   run: function(sketch) {
+      console.log("sketch is ")
+      console.log(sketch)
     var strokes = sketch.strokes;
     var sketchCorners = [];
     for (var i = 0; i < strokes.length; i++) {
@@ -56,6 +58,12 @@ var IStraw = {
     var straws = new Array(points.length - 1).fill(0);
 
     // set the straw distances for the points outside the window (line 4, 5, 6, 7)
+//    console.log("passing line 61")
+//      console.log(points[1+W])
+//      console.log(1+W)
+//      console.log(points.length)
+      
+      
     straws[1] = this.distance(points[0], points[1 + W]) * ((2 * W) / (1 + W));
     straws[2] = this.distance(points[0], points[2 + W]) * ((2 * W) / (2 + W));
     straws[points.length - 2] = ((2 * W) / (1 + W)) * this.distance(points[points.length - 1], points[points.length - 2 - W]);
