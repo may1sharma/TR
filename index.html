@@ -52,7 +52,7 @@
 	 */
 	function checkSketchForTruss(sketch) {
 		var output = {'containsTruss': false, 'trussStrokeIds': [] };
-		var strokeIds = [];
+		var strokeIds = new Set();
 		// DO SOMETHING HERE TO FIND IF THERE IS A TRUSS AND WHAT STROKE IDS IT IS MADE FROM
 		
 		// Instead of an array, you can use a Set, but make sure to return an array. Something along these lines should work.
@@ -62,7 +62,7 @@
 		console.log(sketch)
 		sketch = SketchIo.simplify(sketch);
 		console.log(sketch)
-		if(!sketch) {
+		if (!sketch) {
 			return output;
 		}
 		// Recognition begins here...
@@ -76,19 +76,29 @@
 	    // gather the corners from their indices
 	    var corners = [];
 	    for (var i = 0; i < resampledSketch.strokes.length; i++) {
-	      var resampledPoints = resampledSketch.strokes[i].points;
-	      var strokeCornerIndices = sketchCornerIndices[i];
-	      for (var j = 0; j < strokeCornerIndices.length; j++) {
-	        corners.push(resampledPoints[strokeCornerIndices[j]]);
-	      }
+			var resampledPoints = resampledSketch.strokes[i].points;
+			var strokeCornerIndices = sketchCornerIndices[i];
+			var isAllLines = true;
 
-	    // For each stroke check whether it is connected via line and include it in trussStrokeIds
+			for (var j = 0; j < strokeCornerIndices.length; j++) {
+				corners.push(resampledPoints[strokeCornerIndices[j]]);
+				if (!(j==0 || isLine(resampledPoints, strokeCornerIndices[j-1], strokeCornerIndices[j]))) {
+					isAllLines = False;
+				}
+			}
 
+	    	// PolyLine Test as per PaleoSketch paper and include it in trussStrokeIds if the required condition satisfies
+	    	var DCRvalue = calculateDCR(resampledPoints);
+	    	// count number of lines 
+	    	var subStrokeCount = strokeCornerIndices.length - 1;
+	    	// Additional check for truss: excluding strokes with less than 4 corners 
+	    	// Minimum consideration should be a triangle with 4 corners or 3 sides
+	    	if (!(subStrokeCount < 3) && 
+	    			(DCRvalue > 9.0 && subStrokeCount < 10) || (isAllLines && DCRvalue > 6.0))  {
+	    		strokeIds.add(resampledSketch.strokes[i].id);
+	    	}
 
-	    // count number of lines (should be < 4  overall)
-
-
-
+	    	
 	    }
 
 	    console.log(corners);
@@ -98,18 +108,43 @@
 	    // 2. Proximity Matrix
 
 
-	    // Apply 4 Golden Rules
+	    // Apply 3 Golden Rules plus 1 Platinum rule
 	    // 1. Shapes cannot have more than 4 sides
 	    // 2. Every Node must be connected to a triangle
 	    // 3. Beams cannot pass through a node
-	    // 4. No nodes in the middle of beam
-	    // 5. Our Check: Either trianglular shapes or degree check
+	    // 4. Our Check: Either trianglular shapes or degree check
 
-		output.trussStrokeIds = strokeIds;
+
+
+
+
+
+		// output.trussStrokeIds = strokeIds;  
+		output.trussStrokeIds = [...strokeIds]; //Using Set instead of array
 		return output;
 	}
 	
-	
+	function calculateDCR(points) {
+		var n = points.length;
+		var tail = Math.floor(n/20);
+		var maxChange = Number.MIN_VALUE;
+		var avgChangeSum = 0;
+
+		for(var i=tail; i < n-tail ; i++) {
+			delX = points[i+1].x - points[i].x;
+			delY = points[i+1].y - points[i].y;
+			delXprev = points[i].x - points[i-1].x;
+			delYprev = points[i].y - points[i-1].y;
+			// Math.atan2(y,x) takes care of corner cases for +Pi/2 & -Pi/2
+			var val = Math.atan2(delXprev*delY - delX*delYprev, delX*delXprev + delY*delYprev);
+			var absval = Math.abs(val);
+			if (maxChange < absval) 	maxChange = absval;
+			avgChangeSum += absval;
+		}	
+
+		if (!avgChangeSum) {return -1;}
+		return (maxChange * (n - 2*tail))/ avgChangeSum;
+	}
 	
 	
 	
