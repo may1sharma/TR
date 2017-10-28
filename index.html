@@ -147,7 +147,14 @@
 	    // 1. Adjacency Matrix 
 	    // 2. Proximity Matrix
 
-
+		var proximityMatrix = []
+	    var threshold = 1;
+	    for (var i = 0; i < corners.length; i++) {
+	    	proximityMatrix[i] = new Array(corners.length).fill(false);
+	    	for (var j = 0; j < corners.length; j++) {
+	    		proximityMatrix[i][j] = proximityCheck(corners[i], corners[j], threshold);
+	    	}
+	    }
 	    // Apply 3 Golden Rules plus 1 Platinum rule
 	    // 1. Shapes cannot have more than 4 sides
 	    // 2. Every Node must be connected to a triangle
@@ -161,6 +168,13 @@
 		return output;
 	}
 	
+
+	function proximityCheck(corner1, corner2, threshold) {
+		var dist = Math.sqrt(Math.pow((corner1.y - corner2.y),2) + Math.pow((corner1.x - corner2.x),2));
+		return (dist < threshold)
+	}
+
+
 	function calculateDCR(points) {
 		var n = points.length;
 		var tail = Math.floor(n/20);
