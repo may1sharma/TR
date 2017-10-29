@@ -97,7 +97,8 @@
 		
 		// Recognition begins here...
 		// get the resampled sketch and its corner indices
-	    var resampledSketch = SketchRecTools.resampleByDistance(sketch);
+		var SamplingDist = determineResampleSpacing(sketch);
+	    var resampledSketch = SketchRecTools.resampleByDistance(sketch, SamplingDist);
 		console.log(resampledSketch)
 		// TODO Fix the below line errors
 	    var sketchCornerIndices = ShortStraw.run(resampledSketch);
@@ -105,6 +106,7 @@
 
 	    // gather the corners from their indices
 	    var corners = [];
+	    var edgeCount = 0;
 	    for (var i = 0; i < resampledSketch.strokes.length; i++) {
 			var resampledPoints = resampledSketch.strokes[i].points;
 			var strokeCornerIndices = sketchCornerIndices[i];
@@ -121,7 +123,7 @@
 				// Arrows drawn in multiple strokes will get eliminated in substroke count check done later
 				// Here we are eliminating arrows drawn in single stroke.
 				// The idea is that the endpoint of an arrow would be in proximity of at least 2 other corners of that stroke.
-				if ( (j != strokeCornerIndices.length - 1) && inProximity(resampledPoints[strokeCornerIndices[j]], resampledPoints[strokeCornerIndices[strokeCornerIndices.length - 1]])) {
+				if ( (j != strokeCornerIndices.length - 1) && proximityCheck(resampledPoints[strokeCornerIndices[j]], resampledPoints[strokeCornerIndices[strokeCornerIndices.length - 1]], 10*SamplingDist)) {
 					arrowEndProximity += 1;
 				}
 			}
@@ -136,6 +138,7 @@
 	    	if (!(subStrokeCount < 3) && arrowEndProximity < 2 &&
 	    			(DCRvalue > 9.0 && subStrokeCount < 10) || (isAllLines && DCRvalue > 6.0))  {
 	    		strokeIds.add(resampledSketch.strokes[i].id);
+	    		edgeCount += subStrokeCount;
 	    	}
 
 	    	
@@ -147,7 +150,8 @@
 	    // 1. Adjacency Matrix 
 	    // 2. Proximity Matrix
 
-		var proximityMatrix = []
+	    // Optimization: Instead for calculating Proximity for  all corners, do it only for strokes in strokeIds list
+		var proximityMatrix = [];
 	    var threshold = 1;
 	    for (var i = 0; i < corners.length; i++) {
 	    	proximityMatrix[i] = new Array(corners.length).fill(false);
@@ -155,12 +159,19 @@
 	    		proximityMatrix[i][j] = proximityCheck(corners[i], corners[j], threshold);
 	    	}
 	    }
+
+
 	    // Apply 3 Golden Rules plus 1 Platinum rule
 	    // 1. Shapes cannot have more than 4 sides
 	    // 2. Every Node must be connected to a triangle
 	    // 3. Beams cannot pass through a node
 	    // 4. No nodes in the middle of beam
-	    // 5. Our Check: Either trianglular shapes or degree check
+	    // 5. Our Check: Either triangular shapes or degree check
+
+	    // Rule 1 implementation: Check for relation E >= 2C - 5
+	    // Calculate number of unique corners and compare with edgeCount
+
+
 
 		// output.trussStrokeIds = strokeIds;  
 		output.trussStrokeIds = [...strokeIds]; //Using Set instead of array
