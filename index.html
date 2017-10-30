@@ -60,9 +60,7 @@
 		// var strokeIds = new Set();
 		// strokeIds.add(id);
 		// output.trussStrokeIds = [...strokeIds]; // This is valid syntax and turns the set into an array.
-		console.log(sketch)
 		sketch = SketchIo.simplify(sketch);
-		console.log(sketch)
 		if (!sketch) {
 			return output;
 		}
@@ -97,10 +95,9 @@
 		
 		// Recognition begins here...
 		// get the resampled sketch and its corner indices
-		var SamplingDist = determineResampleSpacing(sketch);
+		var SamplingDist = SketchRecTools.determineResampleSpacing(sketch);
 	    var resampledSketch = SketchRecTools.resampleByDistance(sketch, SamplingDist);
 		console.log(resampledSketch)
-		// TODO Fix the below line errors
 	    var sketchCornerIndices = ShortStraw.run(resampledSketch);
 		console.log(sketchCornerIndices)
 
@@ -115,8 +112,8 @@
 
 			for (var j = 0; j < strokeCornerIndices.length; j++) {
 				corners.push(resampledPoints[strokeCornerIndices[j]]);
-				if (!(j==0 || isLine(resampledPoints, strokeCornerIndices[j-1], strokeCornerIndices[j]))) {
-					isAllLines = False;
+				if (!(j==0 || ShortStraw.isLine(resampledPoints, strokeCornerIndices[j-1], strokeCornerIndices[j]))) {
+					isAllLines = false;
 				}
 
 				// Arrow Elimination
@@ -164,8 +161,8 @@
 	    // Apply 3 Golden Rules plus 1 Platinum rule
 	    // 1. Shapes cannot have more than 4 sides
 	    // 2. Every Node must be connected to a triangle
-	    // 3. Beams cannot pass through a node
-	    // 4. No nodes in the middle of beam
+	    // 3. Beams cannot pass through a node---------------Not to implement for now
+	    // 4. No nodes in the middle of beam-----------------Not to implement for now
 	    // 5. Our Check: Either triangular shapes or degree check
 
 	    // Rule 1 implementation: Check for relation E >= 2C - 5
