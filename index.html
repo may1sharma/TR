@@ -61,7 +61,7 @@
 	 * containsTruss : true OR false
 	 * trussStrokeIds : [id1, id2, ...] OR [] if no truss
 	 */
-	function checkSketchForTruss(sketch) {
+	function checkSketchForTruss(sketch, visualize) {
 		var output = {'containsTruss': false, 'trussStrokeIds': [] };
 		var strokeIds = new Set();
 		// DO SOMETHING HERE TO FIND IF THERE IS A TRUSS AND WHAT STROKE IDS IT IS MADE FROM
@@ -70,7 +70,9 @@
 		// var strokeIds = new Set();
 		// strokeIds.add(id);
 		// output.trussStrokeIds = [...strokeIds]; // This is valid syntax and turns the set into an array.
-		sketch = SketchIo.simplify(sketch);
+		//sketch = SketchIo.simplify(sketch);
+        //console.log('simplified sketch')
+        console.log(sketch)
 		if (!sketch) {
 			return output;
 		}
@@ -92,12 +94,16 @@
 			var strokeCornerIndices = sketchCornerIndices[i];
 			var isAllLines = true;
 			var arrowEndProximity = 0;
-
+            
+            //console.log('entered first for loop' + i)
 			for (var j = 0; j < strokeCornerIndices.length; j++) {
+                //console.log("entered second for loop")
 				corners.push(resampledPoints[strokeCornerIndices[j]]);
 				if (!(j==0 || IStraw.isLine(resampledPoints, strokeCornerIndices[j-1], strokeCornerIndices[j]))) {
 					isAllLines = false;
 				}
+                
+                //console.log("after if" + j)
 
 				// Arrow Elimination
 				// Arrows drawn in multiple strokes will get eliminated in substroke count check done later
@@ -106,11 +112,14 @@
 				if ( (j != strokeCornerIndices.length - 1) && proximityCheck(resampledPoints[strokeCornerIndices[j]], resampledPoints[strokeCornerIndices[strokeCornerIndices.length - 1]], 10*SamplingDist)) {
 					arrowEndProximity += 1;
 				}
+                
+                //console.log("after second if")
 			}
 
 
 	    	// PolyLine Test as per PaleoSketch paper and include it in trussStrokeIds if the required condition satisfies
 	    	var DCRvalue = calculateDCR(resampledPoints);
+            //console.log("after DCR")
 	    	// count number of lines 
 	    	var subStrokeCount = strokeCornerIndices.length - 1;
 	    	// Additional check for truss: excluding strokes with less than 4 corners 
@@ -120,6 +129,8 @@
 	    		strokeIds.add(resampledSketch.strokes[i].id);
 	    		edgeCount += subStrokeCount;
 	    	}
+            
+            //console.log("after third if")
 
 	    	
 	    }
@@ -133,24 +144,31 @@
 	    // Optimization: Instead for calculating Proximity for  all corners, do it only for strokes in strokeIds list
 		var proximityMatrix = [];
 		var proximityMatrixStrokePoints = [];
-
+        //console.log('entering proximity check')
 	    for (var i = 0; i < corners.length; i++) {
 	    	proximityMatrix[i] = new Array(corners.length).fill(0);
 	    	proximityMatrixStrokePoints[i] = new Array(resampledSketch.strokes.length).fill(0);
+//            console.log('in proximity check')
 	    	for (var j = 0; (j < corners.length) && (j != i); j++) {
 	    		proximityMatrix[i][j] = proximityCheck(corners[i], corners[j], SamplingDist);
 	    	}
+//            console.log('eaftrer first for loop' + i)
 
 	    	// Optimization needed
 	    	for (var j = 0; j < resampledSketch.strokes.length; j++) {
 				var resampledPoints = resampledSketch.strokes[j].points;
 				var strokeCornerIndices = sketchCornerIndices[j];
+//                console.log('inside second for loop' + j)
 
 				for (var k = 0; (k < resampledPoints.length) && (!sketchCornerIndices.includes(k)); k++) {
 					proximityMatrixStrokePoints[i][j] += proximityCheck(resampledPoints[k], corners[i], 0.9 * SamplingDist); 
-				}	    		
+//                    console.log('inside third for loop' + k)
+				}	
+                //console.log('outside third for')
 	    	}
+//            console.log('outside second for')
 	    }
+//        console.log('outside first for')
 
 
 	    // Apply 3 Golden Rules plus 1 Platinum rule
@@ -168,14 +186,15 @@
 			var resampledPoints = resampledSketch.strokes[i].points;
 			cornerDegrees.push(new Array(sketchCornerIndices[i].length).fill(0))
 			var strokeCornerIndices = sketchCornerIndices[i];
+//            console.log('first loop' + i)
 
 			for (var j = 0; j < strokeCornerIndices.length; j++) {
 				// cornerDegrees[i][j] correspond to number of degrees for 'j' corner in 'i' stroke
-				if ((j = 0) || (j < strokeCornerIndices.length - 1)) {
+				if ((j = 0) || (j = strokeCornerIndices.length - 1)) {
 					cornerDegrees[i][j] = 1 + proximityMatrix[offset + j].reduce((a, b) => a + b, 0) 
 					+ 2 * proximityMatrixStrokePoints[offset + j].reduce((a, b) => a + b, 0);
+//                    console.log('second loop' + j)
 				}
-
 				else {
 					cornerDegrees[i][j] = 2 + proximityMatrix[offset + j].reduce((a, b) => a + b, 0)
 					+ 2 * proximityMatrixStrokePoints[offset + j].reduce((a, b) => a + b, 0);
@@ -185,6 +204,8 @@
 			}			
 			offset += strokeCornerIndices.length;
 		}
+        
+//        console.log('outside of everything')
 
 
 
@@ -195,6 +216,13 @@
 
 		// output.trussStrokeIds = strokeIds;  
 		output.trussStrokeIds = [...strokeIds]; //Using Set instead of array
+        
+//        console.log("corners array is:")
+        console.log(corners)
+        
+        if (visualize){
+            visualizeSketch(resampledSketch, corners);
+        }
         
 		return output;
 	}
@@ -322,7 +350,7 @@
 				var sketch = res[0];
 				sketch.points = arrayToObj(sketch.points);
 				document.getElementById('progress').textContent = 'Checking sketch  ' + counter + ' of ' + limit;
-				compareAndLogStats(sketch, checkSketchForTruss(sketch));
+				compareAndLogStats(sketch, checkSketchForTruss(sketch, false));
 				getSketch();
 			}
 		});
@@ -334,8 +362,12 @@
         for (var counter=0; counter<limit; counter++){
             var sketch = sketchesArray[counter];
             document.getElementById('progress').textContent = 'Checking sketch  ' + (counter+1) + ' of ' + limit;
-            compareAndLogStats(sketch, checkSketchForTruss(sketch));
+            //console.log(counter+1)
+            compareAndLogStats(sketch, checkSketchForTruss(sketch, false));
         }
+        displayStats();
+        saveCSV();
+        return;
                 
     }    
     
@@ -369,7 +401,7 @@
 				delete sketch.substrokes;
 				sketch.points = arrayToObj(sketch.points);
 				console.log('Checking sketch ' + (line + 1) + ' of ' + limit);
-				compareAndLogStats(JSON.parse(lines[line]), checkSketchForTruss(sketch)); // Reparse as the sketch param in case they change anything.
+				compareAndLogStats(JSON.parse(lines[line]), checkSketchForTruss(sketch, false)); // Reparse as the sketch param in case they change anything.
 			}
 			displayStats();
 			saveCSV();
@@ -413,7 +445,7 @@
 	var strokeIdMatches = 0;
 	function compareAndLogStats(sketch, ans) {
 		sketch.shapes = arrayToObj(sketch.shapes);
-		sketch.substrokes = arrayToObj(sketch.substrokes);
+		//sketch.substrokes = arrayToObj(sketch.substrokes);
 		sketch.trussStrokeIds = new Set();
 		
 		var row = [];
@@ -508,7 +540,10 @@
         if(sketchIdToView > rangeLimit){sketchIdToView = rangeLimit}
         else if (sketchIdToView === 0){sketchIdToView = 1}
         var sketchToView = localSketchContents[sketchIdToView-1]
-        visualizeSketch(sketchToView)
+        console.log(sketchToView)
+        checkSketchForTruss(sketchToView,true)
+        console.log('done')
+        //visualizeSketch(sketchToView)
     });
                       
 //    function getSketchesFromServerToView(interpretation) {
@@ -522,7 +557,7 @@
 //        
 //        
         //var sketchToView;    
-    function visualizeSketch(sketch) {
+    function visualizeSketch(sketch,corners1) {
         clearCanvas(previewCanvas, previewContext)
         previewSketch(sketch, "gray");
         var resampledSketch = SketchRecTools.resampleByDistance(sketch);
@@ -537,7 +572,7 @@
             corners.push(resampledPoints[strokeCornerIndices[j]]);
           }
         }
-        previewPoints(corners, "red");
+        previewPoints(corners1, "red");
 
     }
         
