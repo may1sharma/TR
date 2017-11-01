@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 	<meta charset="utf-8">
+    <link rel="stylesheet" type="text/css" href="style.css">
 	<title>Homework 2 Starter</title>
 	<!-- An AMD-loader like RequireJS is necessary for srlib's asynchronous modules -->
 	<script src="require.js"></script>
@@ -14,13 +15,14 @@
 	<script type="text/javascript" src="shortStraw.js"></script>
     <script type="text/javascript" src="istraw.js"></script>
 	<script type="text/javascript" src="sketchRecTools.js"></script>
+    
 
 </head>
 <body>
 	<div>Data location</div>
-	<div><input type='radio' name='dataLocation' value='local'>Load data from local data file <input type="file" name="file" id="file"></div>
-	<div><input type='radio' name='dataLocation' value='trussOnly'>Load trusses ONLY from server</div>
-	<div><input type='radio' name='dataLocation' value='trussAndOther' checked>Load trusses and non-trusses from server</div>
+<!--	<div><input type='radio' name='dataLocation' value='local'>Load data from local data file <input type="file" name="file" id="file"></div>-->
+	<div><input type='radio' name='dataLocation' value='trussOnly' checked>Load trusses ONLY from local server</div>
+	<div><input type='radio' name='dataLocation' value='otherOnly'>Load non-trusses ONLY from local server</div>
 	<div>Sketch Limit <input type="number" name="limit" id="limit" value='10'></div>
 	<button id='start'>Start</button>
 	<div id='progress'>Progress will show here.</div>
@@ -42,7 +44,15 @@
 		</tr>
 	</table>
 	<div id='strokeIdResults'></div>
+    <br><br><br><br>
+    <div>
+      <canvas id="previewCanvas" class="canvaslook" width="800" height="400"></canvas>
+    </div>
+    <div><input type='radio' name='localDataLocation' value='trussOnly'>Load trusses from local server</div>
+	<div><input type='radio' name='localDataLocation' value='nonTrussOnly' checked>Load non-trusses from local server</div>
+    <div>Sketch Number <input type="number" name="sketchNumber" id="sketchNum" value='1'><button id='showSketch'>View</button></div>
 	
+    
 	<script type="text/javascript">
 	/**
 	 * Checks a sketch to see if it contains a truss.
@@ -65,41 +75,14 @@
 			return output;
 		}
 
-        //VISUALIZING SOME DATA _____________________________________________________________
-        
-//        var counter = 1
-//        var csvRows = [];
-//        console.log("Points from sketch" + counter)
-//        for (var i = 0; i < sketch.strokes.length; i++){
-//            var stroke = sketch.strokes[i]
-//            for (var j = 0; j < stroke.points.length; j++){
-//                var point = stroke.points[j]
-//                csvRows.push(point['x']+","+point['y'])
-//            }
-//            
-//        }
-//        
-//        var csvString = csvRows.join('\n');
-//        var csvData = new Blob([csvString], { type: 'text/csv' });    
-//        var csvURL = URL.createObjectURL(csvData);
-//        var a = document.createElement('a');
-//        a.href = csvURL;
-//    	a.target = '_blank';
-//    	a.download = 'truss.csv';
-//    	document.body.appendChild(a);
-//    	a.click();
-        
-        
-        
-        //END OF VISUALIZING SOME DATA ______________________________________________________    
-		
+ 
 		// Recognition begins here...
 		// get the resampled sketch and its corner indices
 		var SamplingDist = SketchRecTools.determineResampleSpacing(sketch);
 	    var resampledSketch = SketchRecTools.resampleByDistance(sketch, SamplingDist);
-		console.log(resampledSketch)
-	    var sketchCornerIndices = ShortStraw.run(resampledSketch);
-		console.log(sketchCornerIndices)
+		//console.log(resampledSketch)
+	    var sketchCornerIndices = IStraw.run(resampledSketch);
+		//console.log(sketchCornerIndices)
 
 	    // gather the corners from their indices
 	    var corners = [];
@@ -112,7 +95,7 @@
 
 			for (var j = 0; j < strokeCornerIndices.length; j++) {
 				corners.push(resampledPoints[strokeCornerIndices[j]]);
-				if (!(j==0 || ShortStraw.isLine(resampledPoints, strokeCornerIndices[j-1], strokeCornerIndices[j]))) {
+				if (!(j==0 || IStraw.isLine(resampledPoints, strokeCornerIndices[j-1], strokeCornerIndices[j]))) {
 					isAllLines = false;
 				}
 
@@ -141,7 +124,7 @@
 	    	
 	    }
 
-	    console.log(corners);
+	    //console.log(corners);
 
 	    // For Loop and calculate
 	    // 1. Adjacency Matrix 
@@ -188,8 +171,8 @@
 		var tail = Math.floor(n/20);
 		var maxChange = Number.MIN_VALUE;
 		var avgChangeSum = 0;
-
-		for(var i=tail; i < n-tail ; i++) {
+        if (tail > 0){
+            for(var i=tail; i < n-tail ; i++) {
 			delX = points[i+1].x - points[i].x;
 			delY = points[i+1].y - points[i].y;
 			delXprev = points[i].x - points[i-1].x;
@@ -199,7 +182,8 @@
 			var absval = Math.abs(val);
 			if (maxChange < absval) 	maxChange = absval;
 			avgChangeSum += absval;
-		}	
+		      }	
+        }
 
 		if (!avgChangeSum) {return -1;}
 		return (maxChange * (n - 2*tail))/ avgChangeSum;
@@ -222,6 +206,19 @@
 	// Everything below here you shouldn't need to worry about.
 	//
 	//
+        
+    function readJson(fileName) {
+       var contents;
+       var xhttp = new XMLHttpRequest();
+       xhttp.onreadystatechange = function() {
+          if (this.readyState === 4 && this.status === 200) {
+             contents = JSON.parse(this.response);
+        }
+       };
+       xhttp.open("GET", fileName, false);
+       xhttp.send();
+       return contents;
+    }    
 	
 	var rows = [['mongoId', 'id', 'guessTruss', 'isTruss', 'guessIds', 'realIds', 'shapeFoundMatch', 'idsMatch']];
 
@@ -290,6 +287,19 @@
 		});
     }
         
+    function getSketches(filename){
+        var sketchesArray = readJson(filename)
+        if (limit>sketchesArray.length){limit = sketchesArray.length}
+        for (var counter=0; counter<limit; counter++){
+            var sketch = sketchesArray[counter];
+            document.getElementById('progress').textContent = 'Checking sketch  ' + (counter+1) + ' of ' + limit;
+            compareAndLogStats(sketch, checkSketchForTruss(sketch));
+        }
+                
+    }    
+    
+    
+        
     
     var sketchIds;
 	var counter = 0;
@@ -301,6 +311,7 @@
 			getSketch();
 		}});
 	}
+        
 	
 	function getSketchesFromFile() {
 		var file = document.getElementById('file').files[0];
@@ -427,17 +438,212 @@
 		TN = 0;
 		FP = 0;
 		FN = 0;
+        counter = 0;
 		strokeIdMatches = 0
 		limit = parseInt(document.getElementById('limit').value);
 		var location = document.querySelector('input[name=dataLocation]:checked').value;
-		if (location === 'trussAndOther') {
-			getSketchesFromServer(''); // Empty string interpretation will get everything in the domain.
+		if (location === 'otherOnly') {
+			getSketches('others.json'); // Empty string interpretation will get everything in the domain.
 		} else if (location === 'trussOnly') {
-			getSketchesFromServer('truss');
-		} else {
-			getSketchesFromFile();
-		}
+			getSketches('trusses.json');
+		} 
 	});
+    
+        
+    //CODE TO VIEW SKETCHES ON CANVAS FOR DEBUG-------------------------------------------------------------
+    //-------------------------------------------------------------------------------------------------------            
+    var sketchIdToView;
+    var localSketchContents;    
+    document.getElementById('showSketch').addEventListener('click', function() {
+        //parseInt(document.getElementById('limit').value);
+        sketchIdToView = parseInt(document.getElementById('sketchNum').value);
+        var location = document.querySelector('input[name=localDataLocation]:checked').value;
+		if (location === 'nonTrussOnly') {
+            localSketchContents = readJson("others.json");
+		} else if (location === 'trussOnly') {
+			localSketchContents = readJson("trusses.json");
+        }
+        var rangeLimit = localSketchContents.length
+        if(sketchIdToView > rangeLimit){sketchIdToView = rangeLimit}
+        else if (sketchIdToView === 0){sketchIdToView = 1}
+        var sketchToView = localSketchContents[sketchIdToView-1]
+        visualizeSketch(sketchToView)
+    });
+                      
+//    function getSketchesFromServerToView(interpretation) {
+//		$.ajax({url: "http://srl-prod1.cs.tamu.edu:7750/getIds?domain=SketchRec2017HW2&interpretation=" + interpretation, success: function(result) {
+//			sketchIds = result;
+//			//if (limit > sketchIds.length) { limit = sketchIds.length; } // In case there are fewer sketches than the user selected limit.
+//			getSketchToView();
+//            
+//		}});
+//	}
+//        
+//        
+        //var sketchToView;    
+    function visualizeSketch(sketch) {
+        clearCanvas(previewCanvas, previewContext)
+        previewSketch(sketch, "gray");
+        var resampledSketch = SketchRecTools.resampleByDistance(sketch);
+        var sketchCornerIndices = IStraw.run(resampledSketch);
+        
+        // gather the corners from their indices
+        var corners = [];
+        for (var i = 0; i < resampledSketch.strokes.length; i++) {
+          var resampledPoints = resampledSketch.strokes[i].points;
+          var strokeCornerIndices = sketchCornerIndices[i];
+          for (var j = 0; j < strokeCornerIndices.length; j++) {
+            corners.push(resampledPoints[strokeCornerIndices[j]]);
+          }
+        }
+        previewPoints(corners, "red");
+
+    }
+        
+        previewCanvas = document.getElementById('previewCanvas');
+        if (previewCanvas.getContext)
+        previewContext = previewCanvas.getContext('2d');
+        
+        function showPreview() {
+            document.getElementById('previewCanvas').style.display = "inline";	// show preview in document
+            previewContext.clearRect(0, 0, width, height);		// clear the preview
+        }
+
+        function previewSketch(sketch, color) {
+  //
+            var originalColor = this.strokeColor;					// save original color
+            strokeColor = color;								// change color
+          previewContext.fillStyle = color;
+
+            // iterate through each stroke
+            var strokes = sketch.strokes;
+            for (var i = 0; i < strokes.length; i++) {
+                var points = strokes[i].points;
+
+                // iterate through each point in the stroke
+                for (var j = 0; j < points.length - 1; j++) {
+
+                    var currPoint = points[j];
+                    var nextPoint = points[j + 1];
+                    drawLineSegment(previewContext, currPoint.x, currPoint.y, nextPoint.x, nextPoint.y, strokeColor, strokeSize);
+                }
+            }
+          strokeColor = originalColor;						// revert color
+          previewContext.fillStyle = strokeColor;
+
+        }
+        
+        function previewPoints(points, color) {
+            previewContext.fillStyle = color;						// change color
+            for (var i = 0; i < points.length; i++) {
+                var point = points[i];
+                previewContext.beginPath();
+                //this.previewContext.fillRect(point.x - 7, point.y - 7, 15, 15);
+                previewContext.arc(point.x, point.y, 5, 0, 2* Math.PI);
+                previewContext.fill();
+                previewContext.closePath();
+            }
+            previewContext.fillStyle = strokeColor;			// revert color
+	   }
+          // Draws a line between the specified position on the supplied canvas name
+        // Parameters are: A canvas context, the x position, the y position, the size of the dot
+        function updateCanvas(context, x, y) {
+
+          // If lastX is not set, set lastX and lastY to the current position
+          if (lastX === -1) {
+            lastX = x;
+            lastY = y;
+          }
+
+          // draw latest line segment
+          drawLineSegment(context, lastX, lastY, x, y, strokeColor, strokeSize);
+
+          // Update the last position to reference the current position
+          lastX = x;
+          lastY = y;
+        }
+
+        function clearCanvas(canvas, context) {
+          //
+          context.clearRect(0, 0, canvas.width, canvas.height);
+            //document.getElementById('previewCanvas').style.display = "none";
+        }
+
+        function drawLineSegment(context, x0, y0, x1, y1, color, size) {
+          // Select a fill style
+          context.strokeStyle = color;
+          //ctx.strokeStyle = "rgba("+r+","+g+","+b+","+(a/255)+")";
+
+          // Set the line "cap" style to round, so lines at different angles can join into each other
+          //context.lineCap = "round";
+          //ctx.lineJoin = "round";
+
+          // Draw a filled line
+          context.beginPath();
+
+          // First, move to the old (previous) position
+          context.moveTo(x0, y0);
+
+          // Now draw a line to the current touch/pointer position
+          context.lineTo(x1, y1);
+
+          // Set the line thickness and draw the line
+          context.lineWidth = size;
+          context.stroke();
+
+          context.closePath();
+        }
+        
+                /**
+         * Collects the current point.
+         * @param {number} x - The current point's x-coordinate.
+         * @param {number} y - The current point's y-coordinate.
+         */
+        function collectPoint(x, y) {
+          // create the current point and add to the point collection
+          var time = Date.now();     // create the time
+          var point = {x: x, y: y, time: time};   // create the point
+          DrawCanvasData.points.push(point);                     // add to point collection
+        }
+
+        function collectStroke() {
+          var stroke = {points: DrawCanvasData.points};
+          DrawCanvasData.strokes.push(stroke);
+          DrawCanvasData.points = [];
+        }
+
+        function getSketch() {
+          var sketch = {};
+          sketch.strokes = DrawCanvasData.strokes;
+          return sketch;
+        }
+
+        function doNothing(sketch) {
+          for (var i = 0; i < sketch.strokes.length; i++) {
+            var points = strokes[i].points;
+            for (var j = 0; j < points.length; j++) {
+              var point = points[j];
+              // do stuff
+            }
+          }
+        }
+
+        //VARIABLES----------------------------------------------
+        // Variables for referencing the canvas and 2dcanvas context
+        var previewCanvas
+        var previewContext
+        // Size of the stroke
+        var strokeSize = 3;
+        var strokeColor = "black";
+
+        var DrawCanvasData = {
+          points: [],
+          strokes: [],
+          sketch: {},
+        };    
+        
+    //END OF CODE TO VIEW SKETCHES ON CANVAS FOR DEBUG----------------------------------------------------------
+    //----------------------------------------------------------------------------------------------------------        
 	</script>
 </body>
 </html>

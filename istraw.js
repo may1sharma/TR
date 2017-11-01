@@ -50,6 +50,10 @@ var IStraw = {
 
     // handle singleton-stroke case
     if (points.length === 1) { return corners; }
+    if (points.length < 6 && points.length > 1){
+        corners.push(corners.length-1)
+        return corners
+    }
 
     // set the window length (line 3)
     var W = 3;
@@ -63,23 +67,25 @@ var IStraw = {
 //      console.log(1+W)
 //      console.log(points.length)
       
-      
-    straws[1] = this.distance(points[0], points[1 + W]) * ((2 * W) / (1 + W));
-    straws[2] = this.distance(points[0], points[2 + W]) * ((2 * W) / (2 + W));
-    straws[points.length - 2] = ((2 * W) / (1 + W)) * this.distance(points[points.length - 1], points[points.length - 2 - W]);
-    straws[points.length - 3] = ((2 * W) / (2 + W)) * this.distance(points[points.length - 1], points[points.length - 3 - W]);
+    if (points.length >= 6) {
+        straws[1] = this.distance(points[0], points[1 + W]) * ((2 * W) / (1 + W));
+        straws[2] = this.distance(points[0], points[2 + W]) * ((2 * W) / (2 + W));
+        straws[points.length - 2] = ((2 * W) / (1 + W)) * this.distance(points[points.length - 1], points[points.length - 2 - W]);
+        straws[points.length - 3] = ((2 * W) / (2 + W)) * this.distance(points[points.length - 1], points[points.length - 3 - W]);
 
-    // set the straw distances for the points inside the window (line 8, 9)
-    for (var i = W; i < points.length - W; i++) {
-      straws[i] = this.distance(points[i - W], points[i + W]);
-    }
+        // set the straw distances for the points inside the window (line 8, 9)
+        for (var i = W; i < points.length - W; i++) {
+          straws[i] = this.distance(points[i - W], points[i + W]);
+        }
 
-    corners = this.initCorners(points, corners, straws, W);
-    corners = this.polylineProc(points, corners, straws);
-    corners = this.curveProcessPass1(points, corners);
-    corners = this.curveProcessPass2(points, corners);
+        corners = this.initCorners(points, corners, straws, W);
+        corners = this.polylineProc(points, corners, straws);
+        corners = this.curveProcessPass1(points, corners);
+        corners = this.curveProcessPass2(points, corners);
 
-    return corners;
+        return corners;
+    }  
+    
   },
 
   initCorners: function(points, corners, straws, W) {
