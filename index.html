@@ -149,11 +149,11 @@
 
 	    // Optimization: Instead for calculating Proximity for  all corners, do it only for strokes in strokeIds list
 		var proximityMatrix = [];
-	    var threshold = 1;
+
 	    for (var i = 0; i < corners.length; i++) {
-	    	proximityMatrix[i] = new Array(corners.length).fill(false);
-	    	for (var j = 0; j < corners.length; j++) {
-	    		proximityMatrix[i][j] = proximityCheck(corners[i], corners[j], threshold);
+	    	proximityMatrix[i] = new Array(corners.length).fill(0);
+	    	for (var j = 0; (j < corners.length) && (j != i); j++) {
+	    		proximityMatrix[i][j] = proximityCheck(corners[i], corners[j], SamplingDist);
 	    	}
 	    }
 
@@ -164,6 +164,29 @@
 	    // 3. Beams cannot pass through a node---------------Not to implement for now
 	    // 4. No nodes in the middle of beam-----------------Not to implement for now
 	    // 5. Our Check: Either triangular shapes or degree check
+
+	    var cornerDegrees = [];
+	    var offset = 0;
+
+	    for (var i = 0; i < resampledSketch.strokes.length; i++) {
+			var resampledPoints = resampledSketch.strokes[i].points;
+			cornerDegrees.push(new Array(sketchCornerIndices[i].length).fill(0))
+			var strokeCornerIndices = sketchCornerIndices[i];
+
+			for (var j = 0; j < strokeCornerIndices.length; j++) {
+				// cornerDegrees[i][j] correspond to number of degrees for 'j' corner in 'i' stroke
+				if ((j = 0) || (j < strokeCornerIndices.length - 1)) {
+					cornerDegrees[i][j] = 1 + proximityMatrix[offset + j].reduce((a, b) => a + b, 0)
+				}
+
+				else {
+					cornerDegrees[i][j] = 2 + proximityMatrix[offset + j].reduce((a, b) => a + b, 0)
+				}
+			}			
+			offset += strokeCornerIndices.length;
+		}
+
+
 
 	    // Rule 1 implementation: Check for relation E >= 2C - 5
 	    // Calculate number of unique corners and compare with edgeCount
@@ -179,7 +202,8 @@
 
 	function proximityCheck(corner1, corner2, threshold) {
 		var dist = Math.sqrt(Math.pow((corner1.y - corner2.y),2) + Math.pow((corner1.x - corner2.x),2));
-		return (dist < threshold)
+		var return_val = (dist < threshold) ? 1 : 0;
+		return return_val
 	}
 
 
