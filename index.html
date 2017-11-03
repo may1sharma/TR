@@ -146,7 +146,7 @@
 				if (i!=0 && 
 					sketchCornerIndices[i].length == 3 && sketchCornerIndices[i-1].length == 2 &&
 						proximityCheck(resampledSketch.strokes[i].points[sketchCornerIndices[i][0]], 
-							resampledSketch.strokes[i].points[sketchCornerIndices[i][1]], *SamplingDist) &&
+							resampledSketch.strokes[i].points[sketchCornerIndices[i][1]], 7*SamplingDist) &&
 						( proximityCheck(resampledSketch.strokes[i].points[sketchCornerIndices[i][1]], 
 							resampledSketch.strokes[i-1].points[sketchCornerIndices[i-1][1]], 4*SamplingDist) || 
 							proximityCheck(resampledSketch.strokes[i].points[sketchCornerIndices[i][1]], 
