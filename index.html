@@ -109,6 +109,10 @@
 				isSingleLine = true;
 				corners.push(resampledPoints[strokeCornerIndices[0]]);
 				corners.push(resampledPoints[strokeCornerIndices[1]]);
+				//ignore short lines 
+				// if (proximityCheck(resampledPoints[strokeCornerIndices[0]],resampledPoints[strokeCornerIndices[1]], 2*SamplingDist)) {
+				// 	continue;
+				// }
 			} else {
 
 				for (var j = 0; j < strokeCornerIndices.length; j++) {
@@ -125,7 +129,7 @@
 					// Arrows drawn in multiple strokes will get eliminated in substroke count check done later
 					// Here we are eliminating arrows drawn in single stroke.
 					// The idea is that the endpoint of an arrow would be in proximity of at least 2 other corners of that stroke.
-					if ( (j != strokeCornerIndices.length - 1) && proximityCheck(resampledPoints[strokeCornerIndices[j]], resampledPoints[strokeCornerIndices[strokeCornerIndices.length - 1]], 5*SamplingDist)) {
+					if ( (j != strokeCornerIndices.length - 1) && proximityCheck(resampledPoints[strokeCornerIndices[j]], resampledPoints[strokeCornerIndices[strokeCornerIndices.length - 1]], 7*SamplingDist)) {
 						arrowEndProximity += 1;
 					}
 	                
@@ -135,26 +139,46 @@
 				// Check for single stroke arrow 
 				if (arrowEndProximity >= 2) {
 					isArrow = true;
-					console.log(" Single stroke arrow ");
+					console.log("Visual Single stroke arrow ");
 				}
 
 				// Check for usual Arrows drawn in 2 strokes "->"
-				if (i!=0 && sketchCornerIndices[i].length == 3 && sketchCornerIndices[i-1].length == 2 &&
-					proximityCheck(resampledSketch.strokes[i].points[sketchCornerIndices[i][1]], 
-						resampledSketch.strokes[i-1].points[sketchCornerIndices[i-1][1]], 4*SamplingDist)) {
+				if (i!=0 && 
+					sketchCornerIndices[i].length == 3 && sketchCornerIndices[i-1].length == 2 &&
+						proximityCheck(resampledSketch.strokes[i].points[sketchCornerIndices[i][0]], 
+							resampledSketch.strokes[i].points[sketchCornerIndices[i][1]], *SamplingDist) &&
+						( proximityCheck(resampledSketch.strokes[i].points[sketchCornerIndices[i][1]], 
+							resampledSketch.strokes[i-1].points[sketchCornerIndices[i-1][1]], 4*SamplingDist) || 
+							proximityCheck(resampledSketch.strokes[i].points[sketchCornerIndices[i][1]], 
+								resampledSketch.strokes[i-1].points[sketchCornerIndices[i-1][0]], 4*SamplingDist)
+						) 	) {
 					isArrow = true;
-					console.log(" 2 stroke arrow ");
-					//remove last single line stroke
+					console.log("Visual simple 2 stroke arrow ");
+					//remove last stroke
 					strokeIds.delete(resampledSketch.strokes[i].id);
-		    		edgeCount += sketchCornerIndices[i-1].length-1;
+		    		edgeCount -= sketchCornerIndices[i-1].length-1;
 		    		if (visualize){
 		    			selectedStrokes.pop();
 		    		}
-				}
+				} 
 
 			}
             
-	            
+	        
+			if (i!=0 && sketchCornerIndices[i].length == 2 && sketchCornerIndices[i-1].length == 3 &&
+					proximityCheck(resampledSketch.strokes[i-1].points[sketchCornerIndices[i-1][0]], 
+						resampledSketch.strokes[i-1].points[sketchCornerIndices[i-1][1]], 7*SamplingDist) &&
+					( proximityCheck(resampledSketch.strokes[i].points[sketchCornerIndices[i][1]], 
+						resampledSketch.strokes[i-1].points[sketchCornerIndices[i-1][1]], 4*SamplingDist) || 
+						proximityCheck(resampledSketch.strokes[i].points[sketchCornerIndices[i][0]], 
+							resampledSketch.strokes[i-1].points[sketchCornerIndices[i-1][1]], 4*SamplingDist) 
+					)) {
+				isArrow = true;
+
+				console.log("Visual 2 stroke arrow part");
+				// The head is already not present in selected Strokes due to single stroke arrow check
+			}   
+
 
 	    	// PolyLine Test as per PaleoSketch paper and include it in trussStrokeIds if the required condition satisfies
 	    	var DCRvalue = calculateDCR(resampledPoints);
@@ -163,9 +187,8 @@
 	    	// Additional check for truss: excluding strokes with less than 4 corners 
 	    	// Minimum consideration should be a triangle with 4 corners or 3 sides
 	    	if ( //!(subStrokeCount < 3) && 
-	    		isSingleLine || 
-	    		(!isArrow && 
-	    			((DCRvalue > 9.0 && subStrokeCount < 10) || (isAllLines && DCRvalue > 6.0))))  {
+	    		!isArrow && 
+	    		(isSingleLine || ((DCRvalue > 8.0 && subStrokeCount < 10) || (isAllLines && DCRvalue > 6.0))))  {
 	    		strokeIds.add(resampledSketch.strokes[i].id);
 	    		edgeCount += subStrokeCount;
 	    		if (visualize){
@@ -296,7 +319,7 @@
         // Note: In some cases, selectedStrokes's ids do not match strokeIds
         // examples: 31, 110 (non-truss) 
         if (visualize){
-            visualizeSketch(resampledSketch, reducedCorners, selectedStrokes, mergedPoints);
+            visualizeSketch(resampledSketch, corners, reducedCorners, selectedStrokes, mergedPoints);
         }
         
 		return output;
@@ -644,31 +667,24 @@
 //        
 //        
         //var sketchToView;    
-    function visualizeSketch(sketch, corners1, selectedStrokes, mergedPoints = false) {
+    function visualizeSketch(sketch, corners, reducedCorners, selectedStrokes, mergedPoints = false) {
         clearCanvas(previewCanvas, previewContext)
         previewSketch(sketch, "gray");
-        var resampledSketch = SketchRecTools.resampleByDistance(sketch);
-        var sketchCornerIndices = IStraw.run(resampledSketch);
-        
-        // gather the corners from their indices
-        var corners = [];
-        for (var i = 0; i < resampledSketch.strokes.length; i++) {
-          var resampledPoints = resampledSketch.strokes[i].points;
-          var strokeCornerIndices = sketchCornerIndices[i];
-          for (var j = 0; j < strokeCornerIndices.length; j++) {
-            corners.push(resampledPoints[strokeCornerIndices[j]]);
-          }
-        } 
+
+        previewPoints(corners, "black");
 
         // view selected strokes
-        for (var i=0; i<selectedStrokes.length; i++) {
-        	previewPoints(selectedStrokes[i], "green");
+        if (selectedStrokes) {        	
+	        for (var i=0; i<selectedStrokes.length; i++) {
+	        	previewPoints(selectedStrokes[i], "green");
+	        }
         }
 
         if (mergedPoints) {
         	previewPoints(mergedPoints, "blue", size = 10);        	
         } 
-        previewPoints(corners1, "red");
+        previewPoints(reducedCorners, "red");
+
     }
         
         previewCanvas = document.getElementById('previewCanvas');
