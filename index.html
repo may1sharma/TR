@@ -174,7 +174,6 @@
 							resampledSketch.strokes[i-1].points[sketchCornerIndices[i-1][1]], 4*SamplingDist) 
 					)) {
 				isArrow = true;
-
 				console.log("Visual 2 stroke arrow part");
 				// The head is already not present in selected Strokes due to single stroke arrow check
 			}   
@@ -204,6 +203,9 @@
 	    	
 	    }
 
+
+	    // NOTE 1: strokeIds still have the shaft of arrows. 
+	    // ex: truss 38
 	    //console.log(corners);
 
 	    // For Loop and calculate
@@ -291,7 +293,29 @@
 		//resampledSketch.strokes.splice(1,5);
 		//console.log(cornerDegrees)
 		
+		var currentStrokeIndex = 0;
+		for (var i = 0; i < resampledSketch.strokes.length; i++) {
+			var isSquare = false;
+			if (strokeIds.has(resampledSketch.strokes[i].id)) {
+				var resampledPoints = resampledSketch.strokes[i].points;
+				var strokeCornerIndices = sketchCornerIndices[i];
+				for (var j = 0; j < strokeCornerIndices.length; j++) {
+					if((cornerDegrees[currentStrokeIndex][j] ==  2) && (strokeCornerIndices.length > 4)) {
+						if ((!((j == 0) || (j == strokeCornerIndices.length - 1))) && ((cornerDegrees[currentStrokeIndex][j-1] < 3) && (cornerDegrees[currentStrokeIndex][j+1] < 3))) {
+								console.log('Square Detected')
+								isSquare = true;
+								strokeIds.delete(resampledSketch.strokes[i].id);
+								break;
+						}
+					}
 
+				}
+				currentStrokeIndex ++;
+			}
+			if (isSquare) {
+				continue;
+			}			
+		}
 
 	    // Rule 1 implementation: Check for relation E >= 2C - 5
 	    // Calculate number of unique corners and compare with edgeCount
@@ -307,8 +331,6 @@
 	    var rule1Prediction = (edgeCount >= 2*(corners.length - proximalCorners) - 5);
 
 
-
-
 		// output.trussStrokeIds = strokeIds;  
 		output.trussStrokeIds = [...strokeIds]; //Using Set instead of array
         //console.log(output.trussStrokeIds)
@@ -316,7 +338,15 @@
 //        console.log("corners array is:")
         //console.log(corners)
         
-        // Note: In some cases, selectedStrokes's ids do not match strokeIds
+        // Overwriting calculation of selectedStrokes till 'NOTE 1'(line 207) is fixed
+        var selectedStrokes = [];
+        for (var i = 0; i < resampledSketch.strokes.length; i++) {
+        	if (strokeIds.has(resampledSketch.strokes[i].id)) {
+        		selectedStrokes.push(resampledSketch.strokes[i].points)
+        	}
+        }
+
+        // Note 2: In some cases, selectedStrokes's ids do not match strokeIds
         // examples: 31, 110 (non-truss) 
         if (visualize){
             visualizeSketch(resampledSketch, corners, reducedCorners, selectedStrokes, mergedPoints);
