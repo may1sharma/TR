@@ -82,6 +82,12 @@
 		// get the resampled sketch and its corner indices
 		var SamplingDist = SketchRecTools.determineResampleSpacing(sketch);
 	    var resampledSketch = SketchRecTools.resampleByDistance(sketch, SamplingDist);
+
+	    // Note: Resampling somehow removes the stroke-ids, which are needed later
+	    for (var i = 0; i < resampledSketch.strokes.length; i++) {
+	    	resampledSketch.strokes[i].id = sketch.strokes[i].id;
+	    }
+
 		//console.log(resampledSketch)
 	    var sketchCornerIndices = ShortStraw.run(resampledSketch);
 		//console.log(sketchCornerIndices)
@@ -181,35 +187,47 @@
 	    // 1. Adjacency Matrix 
 	    // 2. Proximity Matrix
 
-	    // Optimization: Instead for calculating Proximity for  all corners, do it only for strokes in strokeIds list
+// ----------------------------------------------------------------------------------------------------------------------------
+
+		if (strokeIds.size == 0) {
+			console.log('strokeIds set is empty after ployline check and arrow elimination');
+			visualizeSketch(resampledSketch, corners, selectedStrokes);
+			return output;
+		}
+
+
 		var proximityMatrix = [];
 		var proximityMatrixStrokePoints = [];
+		var reducedCorners = [];
+
+		for (var i = 0; i < resampledSketch.strokes.length; i++) {
+			if (strokeIds.has(resampledSketch.strokes[i].id)) {
+				var resampledPoints = resampledSketch.strokes[i].points;
+				var strokeCornerIndices = sketchCornerIndices[i];
+				for (var j = 0; j < strokeCornerIndices.length; j++) {
+					reducedCorners.push(resampledPoints[strokeCornerIndices[j]]);
+				}
+			}
+		}
+
+		var mergedPoints = [];
         //console.log('entering proximity check')
-	    for (var i = 0; i < corners.length; i++) {
-	    	proximityMatrix[i] = new Array(corners.length).fill(0);
-	    	proximityMatrixStrokePoints[i] = new Array(resampledSketch.strokes.length).fill(0);
-//            console.log('in proximity check')
-	    	for (var j = 0; (j < corners.length) && (j != i); j++) {
-	    		proximityMatrix[i][j] = proximityCheck(corners[i], corners[j], SamplingDist);
-	    	}
+	    for (var i = 0; i < reducedCorners.length; i++) {
+	    	proximityMatrix[i] = new Array(reducedCorners.length).fill(0);
+//           console.log('in proximity check')
+			// upper-triangular proximity matrix
+	    	for (var j = i+1; j < reducedCorners.length; j++) {
+	    		proximityMatrix[i][j] = proximityCheck(reducedCorners[i], reducedCorners[j], 3*SamplingDist);
+	    	}	    	
+    		if (!(proximityMatrix[i].reduce((a, b) => a + b, 0) == 0)) {
+    			var cornerIndicesToMerge = proximityMatrix[i].reduce((a, e, i) => (e === 1) ? a.concat(i) : a, []);
+    			cornerIndicesToMerge.push(i);
+    			mergedPoints.push(mergePoints(reducedCorners, cornerIndicesToMerge));
+	    		//console.log(cornerIndicesToMerge);
+    		}
+
 //            console.log('eaftrer first for loop' + i)
-
-	    	// Optimization needed
-	    	for (var j = 0; j < resampledSketch.strokes.length; j++) {
-				var resampledPoints = resampledSketch.strokes[j].points;
-				var strokeCornerIndices = sketchCornerIndices[j];
-//                console.log('inside second for loop' + j)
-
-				for (var k = 0; (k < resampledPoints.length) && (!sketchCornerIndices.includes(k)); k++) {
-					proximityMatrixStrokePoints[i][j] += proximityCheck(resampledPoints[k], corners[i], 0.9 * SamplingDist); 
-//                    console.log('inside third for loop' + k)
-				}	
-                //console.log('outside third for')
-	    	}
-//            console.log('outside second for')
 	    }
-//        console.log('outside first for')
-
 
 	    // Apply 3 Golden Rules plus 1 Platinum rule
 	    // 1. Shapes cannot have more than 4 sides
@@ -223,30 +241,33 @@
 	    var offset = 0;
 
 	    for (var i = 0; i < resampledSketch.strokes.length; i++) {
-			var resampledPoints = resampledSketch.strokes[i].points;
-			cornerDegrees.push(new Array(sketchCornerIndices[i].length).fill(0))
-			var strokeCornerIndices = sketchCornerIndices[i];
-//            console.log('first loop' + i)
+	    	if (strokeIds.has(resampledSketch.strokes[i].id)) {
+				var resampledPoints = resampledSketch.strokes[i].points;
+				strokeCornerDegreesArray = new Array(sketchCornerIndices[i].length).fill(0)
+				var strokeCornerIndices = sketchCornerIndices[i];
 
-			for (var j = 0; j < strokeCornerIndices.length; j++) {
-				// cornerDegrees[i][j] correspond to number of degrees for 'j' corner in 'i' stroke
-				if ((j = 0) || (j = strokeCornerIndices.length - 1)) {
-					cornerDegrees[i][j] = 1 + proximityMatrix[offset + j].reduce((a, b) => a + b, 0) 
-					+ 2 * proximityMatrixStrokePoints[offset + j].reduce((a, b) => a + b, 0);
-//                    console.log('second loop' + j)
-				}
-				else {
-					cornerDegrees[i][j] = 2 + proximityMatrix[offset + j].reduce((a, b) => a + b, 0)
-					+ 2 * proximityMatrixStrokePoints[offset + j].reduce((a, b) => a + b, 0);
-				}
+				for (var j = 0; j < strokeCornerIndices.length; j++) {
+					if ((j == 0) || (j == strokeCornerIndices.length - 1)) {
+						strokeCornerDegreesArray[j] = 1 + proximityMatrix[offset + j].reduce((a, b) => a + b, 0) 
+						+ (proximityMatrix.map(function(value,index) { return value[offset + j]; })).reduce((a, b) => a + b, 0);
+					}
+					else {
+						strokeCornerDegreesArray[j] = 2 + proximityMatrix[offset + j].reduce((a, b) => a + b, 0)
+						+ (proximityMatrix.map(function(value,index) { return value[offset + j]; })).reduce((a, b) => a + b, 0);
+					}
 
 
-			}			
-			offset += strokeCornerIndices.length;
+				}	
+				cornerDegrees.push(strokeCornerDegreesArray)		
+				offset += strokeCornerIndices.length;
+			}
 		}
-        
+        //console.log('these are corner indices', sketchCornerIndices)
+        //console.log('these are corner degrees', cornerDegrees)
 //        console.log('outside of everything')
-
+		//resampledSketch.strokes.splice(1,5);
+		//console.log(cornerDegrees)
+		
 
 
 	    // Rule 1 implementation: Check for relation E >= 2C - 5
@@ -267,12 +288,15 @@
 
 		// output.trussStrokeIds = strokeIds;  
 		output.trussStrokeIds = [...strokeIds]; //Using Set instead of array
-        
+        //console.log(output.trussStrokeIds)
+        //console.log(selectedStrokes)
 //        console.log("corners array is:")
-        console.log(corners)
+        //console.log(corners)
         
+        // Note: In some cases, selectedStrokes's ids do not match strokeIds
+        // examples: 31, 110 (non-truss) 
         if (visualize){
-            visualizeSketch(resampledSketch, corners, selectedStrokes);
+            visualizeSketch(resampledSketch, reducedCorners, selectedStrokes, mergedPoints);
         }
         
 		return output;
@@ -311,7 +335,19 @@
 	
 	
 	
-	
+	function mergePoints(reducedCorners, cornerIndicesToMerge) {
+		var mergedPoint = new Object();
+		mergedPoint.x = 0;
+		mergedPoint.y = 0;
+		for (i = 0; i < cornerIndicesToMerge.length; i++) {
+			mergedPoint.x += reducedCorners[cornerIndicesToMerge[i]].x;
+			mergedPoint.y += reducedCorners[cornerIndicesToMerge[i]].y;
+		}
+
+		mergedPoint.x /= cornerIndicesToMerge.length;
+		mergedPoint.y /= cornerIndicesToMerge.length;
+		return mergedPoint;
+	}
 	
 	
 	
@@ -608,7 +644,7 @@
 //        
 //        
         //var sketchToView;    
-    function visualizeSketch(sketch, corners1, selectedStrokes) {
+    function visualizeSketch(sketch, corners1, selectedStrokes, mergedPoints = false) {
         clearCanvas(previewCanvas, previewContext)
         previewSketch(sketch, "gray");
         var resampledSketch = SketchRecTools.resampleByDistance(sketch);
@@ -622,14 +658,17 @@
           for (var j = 0; j < strokeCornerIndices.length; j++) {
             corners.push(resampledPoints[strokeCornerIndices[j]]);
           }
-        }
-        previewPoints(corners1, "red"); 
+        } 
 
         // view selected strokes
         for (var i=0; i<selectedStrokes.length; i++) {
         	previewPoints(selectedStrokes[i], "green");
         }
 
+        if (mergedPoints) {
+        	previewPoints(mergedPoints, "blue", size = 10);        	
+        } 
+        previewPoints(corners1, "red");
     }
         
         previewCanvas = document.getElementById('previewCanvas');
@@ -665,13 +704,13 @@
 
         }
         
-        function previewPoints(points, color) {
+        function previewPoints(points, color, size = 5) {
             previewContext.fillStyle = color;						// change color
             for (var i = 0; i < points.length; i++) {
                 var point = points[i];
                 previewContext.beginPath();
                 //this.previewContext.fillRect(point.x - 7, point.y - 7, 15, 15);
-                previewContext.arc(point.x, point.y, 5, 0, 2* Math.PI);
+                previewContext.arc(point.x, point.y, size, 0, 2* Math.PI);
                 previewContext.fill();
                 previewContext.closePath();
             }
