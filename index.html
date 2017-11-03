@@ -292,13 +292,15 @@
 //        console.log('outside of everything')
 		//resampledSketch.strokes.splice(1,5);
 		//console.log(cornerDegrees)
-		
+
 		var currentStrokeIndex = 0;
 		for (var i = 0; i < resampledSketch.strokes.length; i++) {
 			var isSquare = false;
+			var isSingleStrokeTriangle = false;
 			if (strokeIds.has(resampledSketch.strokes[i].id)) {
 				var resampledPoints = resampledSketch.strokes[i].points;
 				var strokeCornerIndices = sketchCornerIndices[i];
+
 				for (var j = 0; j < strokeCornerIndices.length; j++) {
 					if((cornerDegrees[currentStrokeIndex][j] ==  2) && (strokeCornerIndices.length > 4)) {
 						if ((!((j == 0) || (j == strokeCornerIndices.length - 1))) && ((cornerDegrees[currentStrokeIndex][j-1] < 3) && (cornerDegrees[currentStrokeIndex][j+1] < 3))) {
@@ -308,11 +310,20 @@
 								break;
 						}
 					}
-
 				}
+
+									
+				if((strokeCornerIndices.length == 4) && (!isSquare) &&  (proximityCheck(resampledPoints[strokeCornerIndices[0]], resampledPoints[strokeCornerIndices[strokeCornerIndices.length - 1]], 3*SamplingDist)) && (cornerDegrees[currentStrokeIndex][1] == 2) && (cornerDegrees[currentStrokeIndex][2] == 2)) {
+						// NOTE 3: Removes valid truss-triangles too
+						// ex: truss 41,51
+						console.log('Single Stroke Triangle Detected')
+						isSingleStrokeTriangle = true;
+						strokeIds.delete(resampledSketch.strokes[i].id);					
+				}
+			
 				currentStrokeIndex ++;
 			}
-			if (isSquare) {
+			if (isSquare || isSingleStrokeTriangle) {
 				continue;
 			}			
 		}
