@@ -370,6 +370,26 @@
         	}
         }
 
+
+	    var reducedCorners = [];
+
+		for (var i = 0; i < resampledSketch.strokes.length; i++) {
+			if (strokeIds.has(resampledSketch.strokes[i].id)) {
+				var resampledPoints = resampledSketch.strokes[i].points;
+				var strokeCornerIndices = sketchCornerIndices[i];
+				for (var j = 0; j < strokeCornerIndices.length; j++) {
+					reducedCorners.push(resampledPoints[strokeCornerIndices[j]]);
+				}
+			}
+		}
+
+		if (strokeIds.size == 0) {
+			console.log('strokeIds set is empty after every check');
+			visualizeSketch(resampledSketch, corners, [], selectedStrokes);
+			return output;
+		}
+
+
         if (visualize){
             visualizeSketch(resampledSketch, corners, reducedCorners, selectedStrokes, mergedPoints);
         }
