@@ -321,6 +321,28 @@
 				continue;
 			}			
 		}
+
+		if (strokeIds.size == 1) {
+			var currentStrokeIndex = 0;
+			for (var i = 0; i < resampledSketch.strokes.length; i++) {
+				var isSingleStrokeTriangle = false;
+				if (strokeIds.has(resampledSketch.strokes[i].id)) {
+					var resampledPoints = resampledSketch.strokes[i].points;
+					var strokeCornerIndices = sketchCornerIndices[i];
+
+					if((strokeCornerIndices.length == 4) &&  (proximityCheck(resampledPoints[strokeCornerIndices[0]], resampledPoints[strokeCornerIndices[strokeCornerIndices.length - 1]], 3*SamplingDist)) && (cornerDegrees[currentStrokeIndex][1] == 2) && (cornerDegrees[currentStrokeIndex][2] == 2)) {
+							console.log('Single Stroke Triangle Detected with strokeId: ', resampledSketch.strokes[i].id);
+							isSingleStrokeTriangle = true;
+							strokeIds.delete(resampledSketch.strokes[i].id);					
+					}
+					currentStrokeIndex ++;
+				}
+				if (isSingleStrokeTriangle) {
+					break;
+				}			
+			}
+		}
+
 	    // Rule 1 implementation: Check for relation E >= 2C - 5
 	    // Calculate number of unique corners and compare with edgeCount
 	    // Unique corners = corners.length - number of ones in upper half of proximityMatrix
