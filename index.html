@@ -155,7 +155,7 @@
 					isArrow = true;
 					console.log("Visual simple 2 stroke arrow ");
 					//remove last stroke
-					strokeIds.delete(resampledSketch.strokes[i].id);
+					strokeIds.delete(resampledSketch.strokes[i-1].id);
 		    		edgeCount -= sketchCornerIndices[i-1].length-1;
 		    		if (visualize){
 		    			selectedStrokes.pop();
@@ -204,8 +204,6 @@
 	    }
 
 
-	    // NOTE 1: strokeIds still have the shaft of arrows. 
-	    // ex: truss 38
 	    //console.log(corners);
 
 	    // For Loop and calculate
@@ -296,7 +294,7 @@
 		var currentStrokeIndex = 0;
 		for (var i = 0; i < resampledSketch.strokes.length; i++) {
 			var isSquare = false;
-			var isSingleStrokeTriangle = false;
+			var isSmallLine = false;
 			if (strokeIds.has(resampledSketch.strokes[i].id)) {
 				var resampledPoints = resampledSketch.strokes[i].points;
 				var strokeCornerIndices = sketchCornerIndices[i];
@@ -304,7 +302,7 @@
 				for (var j = 0; j < strokeCornerIndices.length; j++) {
 					if((cornerDegrees[currentStrokeIndex][j] ==  2) && (strokeCornerIndices.length > 4)) {
 						if ((!((j == 0) || (j == strokeCornerIndices.length - 1))) && ((cornerDegrees[currentStrokeIndex][j-1] < 3) && (cornerDegrees[currentStrokeIndex][j+1] < 3))) {
-								console.log('Square Detected')
+								console.log('Square Detected with strokeId: ', resampledSketch.strokes[i].id); 
 								isSquare = true;
 								strokeIds.delete(resampledSketch.strokes[i].id);
 								break;
@@ -312,22 +310,17 @@
 					}
 				}
 
-									
-				if((strokeCornerIndices.length == 4) && (!isSquare) &&  (proximityCheck(resampledPoints[strokeCornerIndices[0]], resampledPoints[strokeCornerIndices[strokeCornerIndices.length - 1]], 3*SamplingDist)) && (cornerDegrees[currentStrokeIndex][1] == 2) && (cornerDegrees[currentStrokeIndex][2] == 2)) {
-						// NOTE 3: Removes valid truss-triangles too
-						// ex: truss 41,51
-						console.log('Single Stroke Triangle Detected')
-						isSingleStrokeTriangle = true;
-						strokeIds.delete(resampledSketch.strokes[i].id);					
+				if ((strokeCornerIndices.length == 2) && (!isSquare) && (proximityCheck(resampledPoints[strokeCornerIndices[0]], resampledPoints[strokeCornerIndices[1]], 3*SamplingDist))) {
+					console.log('Small Line Detected with strokeId: ', resampledSketch.strokes[i].id)
+					isSmallLine = true;
+					strokeIds.delete(resampledSketch.strokes[i].id);	
 				}
-			
 				currentStrokeIndex ++;
 			}
-			if (isSquare || isSingleStrokeTriangle) {
+			if (isSquare || isSmallLine) {
 				continue;
 			}			
 		}
-
 	    // Rule 1 implementation: Check for relation E >= 2C - 5
 	    // Calculate number of unique corners and compare with edgeCount
 	    // Unique corners = corners.length - number of ones in upper half of proximityMatrix
@@ -341,15 +334,13 @@
 	    }
 	    var rule1Prediction = (edgeCount >= 2*(corners.length - proximalCorners) - 5);
 
-
 		// output.trussStrokeIds = strokeIds;  
 		output.trussStrokeIds = [...strokeIds]; //Using Set instead of array
         //console.log(output.trussStrokeIds)
         //console.log(selectedStrokes)
 //        console.log("corners array is:")
         //console.log(corners)
-        
-        // Overwriting calculation of selectedStrokes till 'NOTE 1'(line 207) is fixed
+
         var selectedStrokes = [];
         for (var i = 0; i < resampledSketch.strokes.length; i++) {
         	if (strokeIds.has(resampledSketch.strokes[i].id)) {
@@ -357,8 +348,6 @@
         	}
         }
 
-        // Note 2: In some cases, selectedStrokes's ids do not match strokeIds
-        // examples: 31, 110 (non-truss) 
         if (visualize){
             visualizeSketch(resampledSketch, corners, reducedCorners, selectedStrokes, mergedPoints);
         }
