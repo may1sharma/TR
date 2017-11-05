@@ -46,7 +46,7 @@
 	<div id='strokeIdResults'></div>
     <br><br><br><br>
     <div>
-      <canvas id="previewCanvas" class="canvaslook" width="800" height="400"></canvas>
+      <canvas id="previewCanvas" class="canvaslook" width="1200" height="1200"></canvas>
     </div>
     <div><input type='radio' name='localDataLocation' value='trussOnly'>Load trusses from local server</div>
 	<div><input type='radio' name='localDataLocation' value='nonTrussOnly' checked>Load non-trusses from local server</div>
@@ -144,7 +144,7 @@
 
 				// Check for usual Arrows drawn in 2 strokes "->"
 				if (i!=0 && 
-					sketchCornerIndices[i].length == 3 && sketchCornerIndices[i-1].length == 2 &&
+					(sketchCornerIndices[i].length == 3 || sketchCornerIndices[i].length == 2) && sketchCornerIndices[i-1].length == 2 &&
 						proximityCheck(resampledSketch.strokes[i].points[sketchCornerIndices[i][0]], 
 							resampledSketch.strokes[i].points[sketchCornerIndices[i][1]], 7*SamplingDist) &&
 						( proximityCheck(resampledSketch.strokes[i].points[sketchCornerIndices[i][1]], 
@@ -165,7 +165,7 @@
 			}
             
 	        
-			if (i!=0 && sketchCornerIndices[i].length == 2 && sketchCornerIndices[i-1].length == 3 &&
+			if (i!=0 && sketchCornerIndices[i].length == 2 && (sketchCornerIndices[i-1].length == 3 || sketchCornerIndices[i-1].length == 2) &&
 					proximityCheck(resampledSketch.strokes[i-1].points[sketchCornerIndices[i-1][0]], 
 						resampledSketch.strokes[i-1].points[sketchCornerIndices[i-1][1]], 7*SamplingDist) &&
 					( proximityCheck(resampledSketch.strokes[i].points[sketchCornerIndices[i][1]], 
@@ -388,6 +388,9 @@
 			visualizeSketch(resampledSketch, corners, [], selectedStrokes);
 			return output;
 		}
+        else{
+            output.containsTruss = true;
+        }
 
 
         if (visualize){
@@ -714,9 +717,9 @@
         sketchIdToView = parseInt(document.getElementById('sketchNum').value);
         var location = document.querySelector('input[name=localDataLocation]:checked').value;
 		if (location === 'nonTrussOnly') {
-            localSketchContents = readJson("others.json");
+            localSketchContents = readJson("other_training.json");
 		} else if (location === 'trussOnly') {
-			localSketchContents = readJson("trusses.json");
+			localSketchContents = readJson("trusses_training.json");
         }
         var rangeLimit = localSketchContents.length
         if(sketchIdToView > rangeLimit){sketchIdToView = rangeLimit}
@@ -752,9 +755,9 @@
 	        }
         }
 
-        if (mergedPoints) {
-        	previewPoints(mergedPoints, "blue", size = 10);        	
-        } 
+//        if (mergedPoints) {
+//        	previewPoints(mergedPoints, "blue", size = 10);        	
+//        } 
         previewPoints(reducedCorners, "red");
 
     }
