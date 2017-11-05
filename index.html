@@ -89,7 +89,7 @@
 	    }
 
 		//console.log(resampledSketch)
-	    var sketchCornerIndices = ShortStraw.run(resampledSketch);
+	    var sketchCornerIndices = IStraw.run(resampledSketch);
 		//console.log(sketchCornerIndices)
 
 	    // gather the corners from their indices
@@ -144,7 +144,7 @@
 
 				// Check for usual Arrows drawn in 2 strokes "->"
 				if (i!=0 && 
-					(sketchCornerIndices[i].length == 3 || sketchCornerIndices[i].length == 2) && sketchCornerIndices[i-1].length == 2 &&
+					(sketchCornerIndices[i].length == 3) && sketchCornerIndices[i-1].length == 2 &&
 						proximityCheck(resampledSketch.strokes[i].points[sketchCornerIndices[i][0]], 
 							resampledSketch.strokes[i].points[sketchCornerIndices[i][1]], 7*SamplingDist) &&
 						( proximityCheck(resampledSketch.strokes[i].points[sketchCornerIndices[i][1]], 
@@ -165,7 +165,7 @@
 			}
             
 	        
-			if (i!=0 && sketchCornerIndices[i].length == 2 && (sketchCornerIndices[i-1].length == 3 || sketchCornerIndices[i-1].length == 2) &&
+			if (i!=0 && sketchCornerIndices[i].length == 2 && (sketchCornerIndices[i-1].length == 3) &&
 					proximityCheck(resampledSketch.strokes[i-1].points[sketchCornerIndices[i-1][0]], 
 						resampledSketch.strokes[i-1].points[sketchCornerIndices[i-1][1]], 7*SamplingDist) &&
 					( proximityCheck(resampledSketch.strokes[i].points[sketchCornerIndices[i][1]], 
@@ -187,7 +187,7 @@
 	    	// Minimum consideration should be a triangle with 4 corners or 3 sides
 	    	if ( //!(subStrokeCount < 3) && 
 	    		!isArrow && 
-	    		(isSingleLine || ((DCRvalue > 8.0 && subStrokeCount < 10) || (isAllLines && DCRvalue > 6.0))))  {
+	    		(isSingleLine || ((DCRvalue > 8.0 && subStrokeCount < 10) || (isAllLines && DCRvalue > 4))))  {
 	    		strokeIds.add(resampledSketch.strokes[i].id);
 	    		edgeCount += subStrokeCount;
 	    		if (visualize){
@@ -195,7 +195,7 @@
 	    		}
 	    	}
             
-    
+    		console.log('Visual Stroke ID is: ' + resampledSketch.strokes[i].id);
 			console.log("Visual Single Line : " + isSingleLine);
 			console.log("Visual Arrow Check : " + isArrow);	
 			console.log("Visual DCRvalue : " + DCRvalue);
@@ -288,13 +288,15 @@
         //console.log('these are corner indices', sketchCornerIndices)
         //console.log('these are corner degrees', cornerDegrees)
 //        console.log('outside of everything')
-		//resampledSketch.strokes.splice(1,5);
-		//console.log(cornerDegrees)
+		//resampledSketch.strokes.splice(14,1);
+		console.log('reduced corners:', reducedCorners);
 
 		var currentStrokeIndex = 0;
 		for (var i = 0; i < resampledSketch.strokes.length; i++) {
 			var isSquare = false;
 			var isSmallLine = false;
+			var isIndividualBigLine = false;
+			var isAxes = false;
 			if (strokeIds.has(resampledSketch.strokes[i].id)) {
 				var resampledPoints = resampledSketch.strokes[i].points;
 				var strokeCornerIndices = sketchCornerIndices[i];
@@ -315,9 +317,40 @@
 					isSmallLine = true;
 					strokeIds.delete(resampledSketch.strokes[i].id);	
 				}
+
+
+				if ((strokeCornerIndices.length == 2) && (!isSquare) && (!isSmallLine)) {
+					var count = 0;
+					for (var k = 0; k < reducedCorners.length; k++) {
+						count += proximityCheck(resampledPoints[strokeCornerIndices[0]], reducedCorners[k], 1 * SamplingDist) + proximityCheck(resampledPoints[strokeCornerIndices[1]], reducedCorners[k], 1 * SamplingDist)
+					}
+					var degreeBool = (cornerDegrees[currentStrokeIndex][0] == 1) || (cornerDegrees[currentStrokeIndex][1] == 1)
+
+					if (count == 2 || degreeBool) {
+						console.log('Individual Big Line Detected with strokeId: ', resampledSketch.strokes[i].id)
+						isIndividualBigLine = true;
+						strokeIds.delete(resampledSketch.strokes[i].id);
+					}	
+				}
+
+
+
+				if ((strokeCornerIndices.length == 3) && (!isSquare) && (!isSmallLine) && (!isIndividualBigLine)) {
+					var count = 0;
+					for (var k = 0; k < reducedCorners.length; k++) {
+						count += proximityCheck(resampledPoints[strokeCornerIndices[0]], reducedCorners[k], 1 * SamplingDist) + proximityCheck(resampledPoints[strokeCornerIndices[2]], reducedCorners[k], 1 * SamplingDist)
+					}
+
+					if (count == 2) {
+						console.log('Axes Detected with strokeId: ', resampledSketch.strokes[i].id)
+						isAxes = true;
+						strokeIds.delete(resampledSketch.strokes[i].id);
+					}	
+				}
+
 				currentStrokeIndex ++;
 			}
-			if (isSquare || isSmallLine) {
+			if (isSquare || isSmallLine || isIndividualBigLine || isAxes) {
 				continue;
 			}			
 		}
@@ -413,8 +446,7 @@
 		var tail = Math.ceil(n/20);
 		var maxChange = Number.MIN_VALUE;
 		var avgChangeSum = 0;
-        if (tail > 0){
-            for(var i=tail; i < n-tail ; i++) {
+        for(var i=tail; i < n-tail ; i++) {
 			delX = points[i+1].x - points[i].x;
 			delY = points[i+1].y - points[i].y;
 			delXprev = points[i].x - points[i-1].x;
@@ -424,7 +456,6 @@
 			var absval = Math.abs(val);
 			if (maxChange < absval) 	maxChange = absval;
 			avgChangeSum += absval;
-		      }	
         }
 
 		if (!avgChangeSum) {return -1;}
