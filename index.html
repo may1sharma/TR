@@ -433,6 +433,77 @@
 		return output;
 	}
 	
+    var FP1 = 0;
+    var FN1 = 0;
+    var TP1 = 0;
+    var TN1 = 0;
+
+    var FP2 = 0;
+    var FN2 = 0;
+    var TP2 = 0;
+    var TN2 = 0;
+        
+    function performanceUpdate(sketch, output){
+        //tp2 - id's match
+        //tn2 - not a truss - tn1 + ids empty
+        //fp2 - not a truss recognized as truss - fp1
+        //fn2 - fn1
+        
+        if (sketch.shapes.length==0){ // sketch is not truss 
+            if (output.containsTruss){ //recognized as truss
+                FP1++
+                FP2++
+            }
+            else if (!output.containsTruss){ //not recognized as truss
+                TN1++
+                if (output.trussStrokeIds.length == 0){
+                    TN2++
+                }
+            }
+        }
+        else{ //sketch is truss
+            var correctIds = sketch.shapes[0].subElements 
+            if (output.containsTruss){ //recognized as truss
+                TP1++
+            var idsMatch = true; // Until we prove otherwise
+            var tempAns = new Set(output.trussStrokeIds);
+            var tempSketch = new Set(correctIds);
+            if (tempAns.size !== tempSketch.size) { // Different number of strokeIds, so no match.
+                idsMatch = false;
+            } else {
+                for (var elem of tempAns) { // Stupid set iteration not using for in like a normal object...
+                    tempSketch.delete(elem);
+                }
+                idsMatch = tempSketch.size === 0; // If all ids match, then all will be removed and tempSketch.size will be 0.
+                if (idsMatch){TP2++}
+		      }    
+            }
+            else if (!output.containsTruss){ //not recognized as truss
+                FN1++
+                FN2++
+            }
+            
+        }
+        
+    }   
+        
+        function displayStats() {
+		document.getElementById('TP1').textContent = TP1;
+		document.getElementById('FP1').textContent = FP1;
+		document.getElementById('FN1').textContent = FN1;
+		document.getElementById('TN1').textContent = TN1;
+            
+        document.getElementById('TP2').textContent = TP2;
+		document.getElementById('FP2').textContent = FP2;
+		document.getElementById('FN2').textContent = FN2;
+		document.getElementById('TN2').textContent = TN2;
+	}
+        
+     function calculateFMeasure(){
+         var FM1 = (2*TP1)/(2*TP1+FP1+FN1)
+         var FM2 = (2*TP2)/(2*TP2+FP2+FN2)
+     }   
+
 
 	function proximityCheck(corner1, corner2, threshold) {
 		var dist = Math.sqrt(Math.pow((corner1.y - corner2.y),2) + Math.pow((corner1.x - corner2.x),2));
