@@ -23,7 +23,8 @@
 <!--	<div><input type='radio' name='dataLocation' value='local'>Load data from local data file <input type="file" name="file" id="file"></div>-->
 	<div><input type='radio' name='dataLocation' value='trussOnly' checked>Load trusses ONLY from local server</div>
 	<div><input type='radio' name='dataLocation' value='otherOnly'>Load non-trusses ONLY from local server</div>
-	<div>Sketch Limit <input type="number" name="limit" id="limit" value='10'></div>
+    <div><input type='radio' name='dataLocation' value='all'>Load ALL data from local server</div>
+<!--	<div>Sketch Limit <input type="number" name="limit" id="limit" value='10'></div>-->
 	<button id='start'>Start</button>
 	<div id='progress'>Progress will show here.</div>
 	<table>
@@ -34,13 +35,31 @@
 		</tr>
 		<tr>
 			<td>Predicted truss</td>
-			<td id='TP'>0</td>
-			<td id='FP'>0</td>
+			<td id='TP1'>0</td>
+			<td id='FP1'>0</td>
 		</tr>
 		<tr>
 			<td>Predicted no truss</td>
-			<td id='FN'>0</td>
-			<td id='TN'>0</td>
+			<td id='FN1'>0</td>
+			<td id='TN1'>0</td>
+		</tr>
+	</table>
+    <br><br>
+    <table>
+		<tr>
+			<td></td>
+			<td>IDs correct</td>
+			<td>IDs incorrect</td>
+		</tr>
+		<tr>
+			<td>Predicted truss</td>
+			<td id='TP2'>0</td>
+			<td id='FP2'>0</td>
+		</tr>
+		<tr>
+			<td>Predicted no truss</td>
+			<td id='FN2'>0</td>
+			<td id='TN2'>0</td>
 		</tr>
 	</table>
 	<div id='strokeIdResults'></div>
@@ -487,7 +506,7 @@
         
     }   
         
-        function displayStats() {
+    function displayStats() {
 		document.getElementById('TP1').textContent = TP1;
 		document.getElementById('FP1').textContent = FP1;
 		document.getElementById('FN1').textContent = FN1;
@@ -645,8 +664,9 @@
         
     function getSketches(filename){
         var sketchesArray = readJson(filename)
-        if (limit>sketchesArray.length){limit = sketchesArray.length}
-        for (var counter=0; counter<limit; counter++){
+        limit = sketchesArray.length
+        //if (limit>sketchesArray.length){limit = sketchesArray.length}
+        for (var counter=0; counter<sketchesArray.length; counter++){
             var sketch = sketchesArray[counter];
             document.getElementById('progress').textContent = 'Checking sketch  ' + (counter+1) + ' of ' + limit;
             //console.log(counter+1)
@@ -730,83 +750,124 @@
 	var FN = 0;
 	// All or nothing accuracy for strokeIds, so just track if they match entirely or not.
 	var strokeIdMatches = 0;
-	function compareAndLogStats(sketch, ans) {
-		sketch.shapes = arrayToObj(sketch.shapes);
-		//sketch.substrokes = arrayToObj(sketch.substrokes);
-		sketch.trussStrokeIds = new Set();
-		
-		var row = [];
-		row.push(sketch['_id']);
-		row.push(sketch.id);
-		row.push(ans.containsTruss);
-		
-		// This finds the answer data for the original sketch. Could probably be factored out of this function, but for the homework starter files I'm tired and this works fine anyway.
-		sketch.containsTruss = false;
-		Object.keys(sketch.shapes).forEach(function(key) {
-			var shape = sketch.shapes[key];
-			if (shape.interpretation === 'truss') {
-				sketch.containsTruss = true;
-				findParentStrokes(sketch, key);
-			}
-		});
-		
-		row.push(sketch.containsTruss);
-		row.push('"' + JSON.stringify([...new Set(ans.trussStrokeIds)]).replace(/"/g, '') + '"'); // This will make the field surrounded by double quotes but have no double quotes so it all appears in 1 cell in the CSV.
-		row.push('"' + JSON.stringify([...sketch.trussStrokeIds]).replace(/"/g, '') + '"');
-		row.push(sketch.containsTruss === ans.containsTruss);
-		
-		// Find if the strokeIds all match.
-		var idsMatch = true; // Until we prove otherwise
-		var tempAns = new Set(ans.trussStrokeIds);
-		var tempSketch = new Set(sketch.trussStrokeIds);
-		if (tempAns.size !== tempSketch.size) { // Different number of strokeIds, so no match.
-			idsMatch = false;
-		} else {
-			for (var elem of tempAns) { // Stupid set iteration not using for in like a normal object...
-				tempSketch.delete(elem);
-			}
-			idsMatch = tempSketch.size === 0; // If all ids match, then all will be removed and tempSketch.size will be 0.
-		}
-		row.push(idsMatch);
-		
-		// Update metrics
-		if (sketch.containsTruss && ans.containsTruss) {
-			TP++;
-		} else if (!sketch.containsTruss && ans.containsTruss) { // Doesn't contain a truss, but answer says it does
-			FP++;
-		} else if (sketch.containsTruss && !ans.containsTruss) {
-			FN++;
-		} else {
-			TN++;
-		}
-		if (idsMatch) { strokeIdMatches++; }
-		
-		rows.push(row);
+	function compareAndLogStats(sketch, output) {
+        if (sketch.shapes.length==0){ // sketch is not truss 
+            if (output.containsTruss){ //recognized as truss
+                FP1++
+                FP2++
+            }
+            else if (!output.containsTruss){ //not recognized as truss
+                TN1++
+                if (output.trussStrokeIds.length == 0){
+                    TN2++
+                }
+            }
+        }
+        else{ //sketch is truss
+            var correctIds = sketch.shapes[0].subElements 
+            if (output.containsTruss){ //recognized as truss
+                TP1++
+            var idsMatch = true; // Until we prove otherwise
+            var tempAns = new Set(output.trussStrokeIds);
+            var tempSketch = new Set(correctIds);
+            if (tempAns.size !== tempSketch.size) { // Different number of strokeIds, so no match.
+                idsMatch = false;
+            } else {
+                for (var elem of tempAns) { // Stupid set iteration not using for in like a normal object...
+                    tempSketch.delete(elem);
+                }
+                idsMatch = tempSketch.size === 0; // If all ids match, then all will be removed and tempSketch.size will be 0.
+                if (idsMatch){TP2++}
+		      }    
+            }
+            else if (!output.containsTruss){ //not recognized as truss
+                FN1++
+                FN2++
+            }
+            
+        }
+        
+//		sketch.shapes = arrayToObj(sketch.shapes);
+//		//sketch.substrokes = arrayToObj(sketch.substrokes);
+//		sketch.trussStrokeIds = new Set();
+//		
+//		var row = [];
+//		row.push(sketch['_id']);
+//		row.push(sketch.id);
+//		row.push(ans.containsTruss);
+//		
+//		// This finds the answer data for the original sketch. Could probably be factored out of this function, but for the homework starter files I'm tired and this works fine anyway.
+//		sketch.containsTruss = false;
+//		Object.keys(sketch.shapes).forEach(function(key) {
+//			var shape = sketch.shapes[key];
+//			if (shape.interpretation === 'truss') {
+//				sketch.containsTruss = true;
+//				findParentStrokes(sketch, key);
+//			}
+//		});
+//		
+//		row.push(sketch.containsTruss);
+//		row.push('"' + JSON.stringify([...new Set(ans.trussStrokeIds)]).replace(/"/g, '') + '"'); // This will make the field surrounded by double quotes but have no double quotes so it all appears in 1 cell in the CSV.
+//		row.push('"' + JSON.stringify([...sketch.trussStrokeIds]).replace(/"/g, '') + '"');
+//		row.push(sketch.containsTruss === ans.containsTruss);
+//		
+//		// Find if the strokeIds all match.
+//		var idsMatch = true; // Until we prove otherwise
+//		var tempAns = new Set(ans.trussStrokeIds);
+//		var tempSketch = new Set(sketch.trussStrokeIds);
+//		if (tempAns.size !== tempSketch.size) { // Different number of strokeIds, so no match.
+//			idsMatch = false;
+//		} else {
+//			for (var elem of tempAns) { // Stupid set iteration not using for in like a normal object...
+//				tempSketch.delete(elem);
+//			}
+//			idsMatch = tempSketch.size === 0; // If all ids match, then all will be removed and tempSketch.size will be 0.
+//		}
+//		row.push(idsMatch);
+//		
+//		// Update metrics
+//		if (sketch.containsTruss && ans.containsTruss) {
+//			TP++;
+//		} else if (!sketch.containsTruss && ans.containsTruss) { // Doesn't contain a truss, but answer says it does
+//			FP++;
+//		} else if (sketch.containsTruss && !ans.containsTruss) {
+//			FN++;
+//		} else {
+//			TN++;
+//		}
+//		if (idsMatch) { strokeIdMatches++; }
+//		
+//		rows.push(row);
 	}
 	
-	function displayStats() {
-		document.getElementById('TP').textContent = TP;
-		document.getElementById('FP').textContent = FP;
-		document.getElementById('FN').textContent = FN;
-		document.getElementById('TN').textContent = TN;
-		document.getElementById('strokeIdResults').textContent = 'StrokeIds matched for ' + strokeIdMatches + ' of ' + limit + ' total sketches.';
-	}
+//	function displayStats() {
+//		document.getElementById('TP').textContent = TP;
+//		document.getElementById('FP').textContent = FP;
+//		document.getElementById('FN').textContent = FN;
+//		document.getElementById('TN').textContent = TN;
+//		document.getElementById('strokeIdResults').textContent = 'StrokeIds matched for ' + strokeIdMatches + ' of ' + limit + ' total sketches.';
+//	}
 	
 	var limit;
 	document.getElementById('start').addEventListener('click', function() {
-		TP = 0;
-		TN = 0;
-		FP = 0;
-		FN = 0;
+		FP1 = 0;
+        FN1 = 0;
+        TP1 = 0;
+        TN1 = 0;
+
+        FP2 = 0;
+        FN2 = 0;
+        TP2 = 0;
+        TN2 = 0;
         counter = 0;
 		strokeIdMatches = 0
-		limit = parseInt(document.getElementById('limit').value);
+		//limit = parseInt(document.getElementById('limit').value);
 		var location = document.querySelector('input[name=dataLocation]:checked').value;
 		if (location === 'otherOnly') {
-			getSketches('others.json'); // Empty string interpretation will get everything in the domain.
+			getSketches('other_training.json'); // Empty string interpretation will get everything in the domain.
 		} else if (location === 'trussOnly') {
 			getSketches('trusses.json');
-		} 
+		} else {getSketches('sketches_training.json');}
 	});
     
         
