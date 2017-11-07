@@ -18,11 +18,12 @@ Steps:
 3. Run the server using the command "node server". The server will start listening on
 	port 3000 locally.
 4. Open a web browser and go to the address "localhost:3000". 
-5. Optional: Select the limit on number of  sketches to be processed.
-6. Click Start.
+5. Click Start Processing.
+6. Progress bar is not getting updated very frequently, Don't worry.
 7. Now just Sit back and relax, or may be grab a cup of coffee.
-8. When the process is finished, save the output json file to a suitable location.
-9. The F-measure for both the Truss sketches and Truss Strokes will appear on screen.
+8. If the page gets unresponsive, please click 'Continue' or 'Wait'.
+9. When the process is finished, save the output json file to a suitable location.
+10.The Confusion Matrix for both the Truss sketches and Truss Strokes will appear on screen.
 
 ------------------------------------------------------------------------------------
 -------------------------------------Developers-------------------------------------
