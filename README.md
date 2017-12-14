@@ -1,5 +1,4 @@
 ------------------------------------------------------------------------------------
----------------------------------CSCE-624 Project 2---------------------------------
 ----------------------------------Truss Recognizer----------------------------------
 ------------------------------------------------------------------------------------
 
@@ -13,10 +12,10 @@ truss or not and the constituting stroke ids in case of a predicted Truss.
 
 Steps:
 1. Place the input data file "data.json" in "/public" folder. The name of input file 
-	is critical and should be renamed to "data.json" beforehand.
+   is critical and should be renamed to "data.json" beforehand.
 2. Open console and go to the project directory.
 3. Run the server using the command "node server". The server will start listening on
-	port 3000 locally.
+   port 3000 locally.
 4. Open a web browser and go to the address "localhost:3000". 
 5. Click Start Processing.
 6. Progress bar is not getting updated very frequently, Don't worry.
@@ -28,6 +27,15 @@ Steps:
 ------------------------------------------------------------------------------------
 -------------------------------------Developers-------------------------------------
 ------------------------------------------------------------------------------------
-Aniket Bonde	(UIN: 825009631 email: bondeanikets@tamu.edu)
 Mayank Sharma	(UIN: 426007370 email: mayank.sharma@tamu.edu)
+
+Aniket Bonde	(UIN: 825009631 email: bondeanikets@tamu.edu)
+
 Niloofar Zarei  (UIN: 225002252 email: n.zarei.3001@tamu.edu)
+
+------------------------------------------------------------------------------------
+--------------------------------------Guidance--------------------------------------
+------------------------------------------------------------------------------------
+Dr. Tracy Hammond (http://srl.tamu.edu)
+
+Paul Taele
